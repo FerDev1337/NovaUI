@@ -1,0 +1,643 @@
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="css/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&amp;display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <title>wplayer after</title>
+  <script type="text/javascript">
+    window._arabica = {};
+  </script>
+  <script type="text/javascript" src="js/jquery.min.js"></script>
+  <script type="text/javascript" src="js/gmApi.js"></script>
+  <script type="text/javascript" src="js/utils.js"></script>
+  <script type="text/javascript" src="localization/index.js"></script>
+  <script type="text/javascript" src="js/localize.js"></script>
+
+  <style>
+    /* Размер иконок приложений: меняйте только эти значения */
+    :root {
+      --app-icon-size: 88px;   /* размер иконки */
+      --app-item-width: 112px; /* ширина ячейки (иконка + подпись) */
+      --app-gap: 16px;         /* отступ между приложениями */
+      --app-label-size: 14px;  /* размер подписи */
+    }
+
+    /* Без прокрутки страницы */
+    html, body {
+      height: 100% !important;
+      overflow: hidden !important;
+      overscroll-behavior: none;
+    }
+
+    /* Раскладка для эмулятора.
+       В index.css у .container размер 1000vw x 1000vh (и flex-колонка), из-за этого заголовок
+       и иконки разъезжались, а кнопки шапки уходили далеко вправо за экран.
+       Теперь контейнер равен окну, а заголовок и иконки привязаны к верхнему левому углу. */
+    :root {
+      --title-top: 10px;   /* расстояние от верха до надписи «Приложения» */
+      --apps-top: 62px;    /* расстояние от верха до иконок (больше число — иконки ниже) */
+      --side-pad: 30px;    /* отступ слева и справа */
+    }
+    body {
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+    .Assets.container.library { background-image: none !important; }
+    .container {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+      width: auto !important;
+      height: auto !important;
+      padding: 0 !important;
+      display: block !important;
+      overflow: hidden !important;
+      box-shadow: none !important;
+    }
+    .topRow { display: block !important; height: 0 !important; }
+    .topRow .header { display: none !important; }
+    .pageTitle {
+      position: absolute !important;
+      top: var(--title-top);
+      left: var(--side-pad);
+      margin: 0 !important;
+      padding: 0 !important;
+      line-height: 1.2;
+    }
+    .contentSection {
+      position: absolute !important;
+      top: var(--apps-top);
+      left: var(--side-pad);
+      right: var(--side-pad);
+      bottom: 0;
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      height: auto !important;
+      min-height: 0 !important;
+      overflow: visible !important;
+    }
+    #library, .gameListContainer {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: auto !important;
+      min-height: 0 !important;
+    }
+    .gameListContainer { align-content: flex-start !important; }
+
+    /* Светлая тема: тёмный текст поверх светлых обоев */
+    body[data-theme="light"] .pageTitle {
+      color: #1c1c1e !important;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+    }
+    body[data-theme="light"] .gameList .gameName {
+      color: #1c1c1e !important;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+    }
+    /* Кнопка смены темы: закреплена в правом верхнем углу экрана */
+    .themeSwitcherBtn {
+      position: fixed !important;
+      top: 14px !important;
+      right: 14px !important;
+      bottom: auto !important;
+      left: auto !important;
+      width: 44px !important;
+      height: 44px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      transform: none !important;
+      z-index: 50 !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.35);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+      cursor: pointer;
+    }
+    body[data-theme="light"] .themeSwitcherBtn {
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .themeSwitcherBtn img {
+      position: static !important;
+      display: block !important;
+      width: 24px !important;
+      height: 24px !important;
+      margin: 0 !important;
+      opacity: 1 !important;
+      filter: none !important;
+      transition: transform 0.35s ease;
+    }
+    .themeSwitcherBtn:active img { transform: rotate(40deg) scale(0.9); }
+
+    /* Кнопка «Сменить обои» — слева от кнопки темы */
+    .wallpaperPickBtn {
+      right: 68px !important;
+    }
+
+    /* Маленькое меню выбора обоев текущей темы */
+    .wallpaperMenu {
+      position: fixed;
+      top: 66px;
+      right: 14px;
+      z-index: 60;
+      display: none;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.55);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+    .wallpaperMenu.open { display: block; }
+    .wpRow + .wpTitle { margin-top: 12px; }
+    .wallpaperMenu { box-sizing: border-box; max-width: 240px; }
+    .wpRow { display: flex; flex-wrap: wrap; margin: 0 -8px -8px 0; }
+    .wpTitle { font-size: 12px; font-weight: 600; color: #fff; opacity: 0.85; margin: 2px 2px 6px; }
+    body[data-theme="light"] .wpTitle { color: #1c1c1e; }
+    .wpItem.live {
+      display: flex; align-items: flex-end; justify-content: center;
+      padding-bottom: 3px; font-size: 10px; font-family: inherit; color: #fff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+    body[data-theme="light"] .wallpaperMenu {
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    }
+    .wpItem {
+      width: 64px;
+      height: 44px;
+      margin: 0 8px 8px 0;
+      padding: 0;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      background-color: rgba(128, 128, 128, 0.35);
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .wpItem:hover { transform: scale(1.06); }
+    .wpItem.active { border-color: #ffffff; }
+    body[data-theme="light"] .wpItem.active { border-color: #1c1c1e; }
+    .themeSwitcherBtn .tooltiptext {
+      left: auto !important;
+      right: 0 !important;
+      top: calc(100% + 6px) !important;
+      bottom: auto !important;
+      margin: 0 !important;
+      transform: none !important;
+      white-space: nowrap;
+    }
+
+    /* Кнопка Library скрыта (разметка оставлена, чтобы не сломать js/index.js) */
+    .navBar {
+      display: none !important;
+    }
+    .header .flexEnd {
+      margin-left: auto !important;
+    }
+
+    /* Сетка приложений */
+    .gameListContainer {
+      gap: 0 !important;
+      align-items: flex-start !important;
+    }
+    .gameListContainer .gameList {
+      width: auto !important;
+      flex: 0 0 auto !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .gameList li {
+      width: var(--app-item-width) !important;
+      min-width: 0 !important;
+      margin: 0 var(--app-gap) var(--app-gap) 0 !important;
+      text-align: center;
+    }
+
+    /* Иконка */
+    .installedGame,
+    .imageContainer {
+      width: var(--app-icon-size) !important;
+      height: var(--app-icon-size) !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+    }
+    .installedGame img,
+    .imageContainer img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain;
+      border-radius: 14px;
+    }
+
+    /* Подпись */
+    .gameList .gameName {
+      font-size: var(--app-label-size) !important;
+      line-height: 1.3 !important;
+      margin: 6px 0 0 !important;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body style="background-image: url(&quot;./images/wallpaper1.png&quot;);">
+  <div id="welcome-message" style="display:none;">
+    <div class="welcome-content">
+      <div class="welcome-header">
+        <span class="welcome-title">Добро пожаловать!</span>
+        <button class="welcome-close" aria-label="Закрыть">✖</button>
+      </div>
+      <div class="welcome-body">
+        <p>Эмулятор был создан Nova Team.<br>Приятного использования!</p>
+      </div>
+    </div>
+  </div>
+  <div class="container library Assets">
+    <div class="topRow">
+    <div class="pageTitle" style="color: white; font-size: 32px; padding: 25px 0 15px 5px; text-align: left; font-weight: 700; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Приложения</div>
+    <div class="flex header spaceBetween vrtlCenter">
+      <div class="flex spaceBetween grow">
+        <ul class="navBar flex">
+          <li class="margin-right-25">
+            <a aria-current="page" class="bold activeLink link library" href="javascript:void(0)" data-str-id="library" onclick="handleTabClick('library')"></a>
+          </li>
+        </ul>
+        <div class="flex flexEnd">
+          <div class="reload flex vrtlCenter pointer capitalize tooltip" onclick="refreshhomehtml()">
+            <img src="">
+            <span class="tooltiptext" data-str-id="reload"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div class="contentSection">
+      <div id="library" class="tab">
+        <div>
+          <div class="flex wrap gameListContainer">
+            <ul class="flex gameList wrap" id="installedApps">
+              <li class="pointer" onclick="handleClick('playStore')">
+                <div class="installedGame">
+                  <img src="./images/googlePlayStore.png" alt="gameImage">
+                </div>
+                <p class="bold ellipsis gameName">Google Play</p>
+              </li>
+            </ul>
+            <ul class="flex gameList wrap" id="installedApps">
+              <li class="pointer" onclick="handleClick('media')">
+                <div class="installedGame">
+                  <img src="./images/media.png" alt="gameImage">
+                </div>
+                <p class="bold ellipsis gameName">Файлы</p>
+              </li>
+            </ul>
+            <ul class="flex gameList wrap" id="installedApps">
+              <li class="pointer" onclick="handleClick('android')">
+                <div class="installedGame">
+                  <img src="./images/settings.png" alt="gameImage">
+                </div>
+                <p class="bold ellipsis gameName">Настройки</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div id="noInternet" class="tab flex perfectCenter">
+        <p class="offlineText" data-str-id="noInternet"></p>
+      </div>
+    </div>
+    <div class="modalContainer">
+      <div class="transparentBg" onclick="hideSystemApps();"></div>
+      <div class="folderPopup gameCenterBg">
+        <div class="flex spaceBetween modalHeading vrtlCenter">
+          <p class="ellipsis" data-str-id="systemApps"></p>
+          <img src="./images/closeIcon.png" class="folderCloseIcon pointer" alt="closeIcon" onclick="hideSystemApps();">
+        </div>
+        <div class="folderAppsContainer">
+          <div>
+            <ul class="flex gameList wrap">
+              <li class="pointer" onclick="handleClick('android')">
+                <div class="imageContainer">
+                  <img src="./images/settings.png" alt="bsApp">
+                </div>
+                <p class="bold ellipsis gameName">WPlayer Settings</p>
+              </li>
+              <li class="pointer" onclick="handleClick('media')">
+                <div class="imageContainer ">
+                  <img src="./images/media.png" alt="bsApp">
+                </div>
+                <p class="bold ellipsis gameName">WPlayer Manager</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="deleteOverlay" onclick="hideDeleteButton();"></div>
+    <div class="uninstallPopup">
+      <div class="flex spaceBetween modalHeading">
+        <p class="deleteText bold">Delete app</p>
+        <img src="./images/closeIcon.png" class="closeIcon pointer" alt="closeIcon" onclick="hideDeleteButton();">
+      </div>
+      <p class="deleteText modalHeading" data-str-id="areYouSure"></p>
+      <div class="flex flexEnd">
+        <button class="whiteButton" onclick="hideDeleteButton();">
+          <p data-str-id="cancel"></p>
+        </button><button class="warningButton" onclick="uninstallGame();">
+          <p data-str-id="delete"></p>
+        </button>
+      </div>
+    </div>
+    <div id="wallpaperOverlay"></div>
+  </div>
+  <div id="wallpaperSwitcherBtn" class="wallpaperSwitcherBtn themeSwitcherBtn tooltip" onclick="switchTheme()" role="button" tabindex="0" aria-label="Сменить тему">
+    <img id="themeIcon" src="" alt="themeSwitcher">
+    <span id="themeTooltip" class="tooltiptext">Светлая тема</span>
+  </div>
+  <div id="wallpaperMenuBtn" class="themeSwitcherBtn wallpaperPickBtn tooltip" onclick="toggleWallpaperMenu()" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Сменить обои">
+    <img id="wallpaperIcon" src="" alt="wallpaperPicker">
+    <span class="tooltiptext">Сменить обои</span>
+  </div>
+  <div id="wallpaperMenu" class="wallpaperMenu" role="menu" aria-label="Обои"></div>
+  <script type="text/javascript" src="js/index.js"></script>
+  <script type="text/javascript">
+    (function () {
+      // Обои каждой темы лежат в ./images/ (расширение подбирается автоматически)
+      var WALLPAPERS = {
+        dark:  ['01_dark', '02_dark', '03_dark'],
+        light: ['04_light', '05_light', '06_light']
+      };
+      var EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'];
+      var BROWSER_BAR = { dark: '#000000', light: '#f2f2f7' };
+      var LABELS = { dark: 'Светлая тема', light: 'Тёмная тема' }; // подсказка показывает, куда переключит кнопка
+      var KEY_THEME = 'wplayerTheme';
+      var KEY_WALL = { dark: 'wplayerWallDark', light: 'wplayerWallLight' };
+
+      function read(key, fallback) {
+        try { var v = localStorage.getItem(key); return v === null ? fallback : v; } catch (e) { return fallback; }
+      }
+      function write(key, value) {
+        try { localStorage.setItem(key, String(value)); } catch (e) {}
+      }
+      function readIndex(theme) {
+        var i = parseInt(read(KEY_WALL[theme], '0'), 10);
+        return (i >= 0 && i < WALLPAPERS[theme].length) ? i : 0;
+      }
+
+      var theme = read(KEY_THEME, 'dark') === 'light' ? 'light' : 'dark';
+      var wall = { dark: readIndex('dark'), light: readIndex('light') }; // выбранные обои для каждой темы
+      var urlCache = {};
+      var requestId = 0;
+
+      var menu = document.getElementById('wallpaperMenu');
+      var menuBtn = document.getElementById('wallpaperMenuBtn');
+      var themeBtn = document.getElementById('wallpaperSwitcherBtn');
+
+      function svgIcon(shape, color) {
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + color +
+                  '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + shape + '</svg>';
+        return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+      }
+      function themeIcon(t) {
+        // В тёмной теме показываем солнце (переключит на светлую), в светлой — луну
+        var shape = t === 'dark'
+          ? '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'
+          : '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+        return svgIcon(shape, t === 'dark' ? '#ffffff' : '#1c1c1e');
+      }
+      function pictureIcon(t) {
+        var shape = '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>';
+        return svgIcon(shape, t === 'dark' ? '#ffffff' : '#1c1c1e');
+      }
+
+      // Подбирает рабочий адрес картинки по имени (перебирает расширения)
+      function resolveUrl(name, done) {
+        if (urlCache[name]) { done(urlCache[name]); return; }
+        var i = 0;
+        (function tryNext() {
+          if (i >= EXTENSIONS.length) { done(null); return; }
+          var url = './images/' + name + '.' + EXTENSIONS[i++];
+          var img = new Image();
+          img.onload = function () { urlCache[name] = url; done(url); };
+          img.onerror = tryNext;
+          img.src = url;
+        })();
+      }
+
+      function setWallpaper(name) {
+        var id = ++requestId;
+        resolveUrl(name, function (url) {
+          if (url && id === requestId) document.body.style.backgroundImage = 'url("' + url + '")';
+        });
+      }
+
+      function closeMenu() {
+        menu.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
+      function openMenu() {
+        menu.classList.add('open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+      }
+
+      // ---- Живые обои ----
+      var LIVE_VIDEOS = []; // свои видео: { name: 'Название', src: './images/live1.mp4' }
+      var LIVE = [
+        { id: 'stars',  name: 'Звёзды', preview: 'radial-gradient(circle at 30% 30%, #26335f, #05070f)' },
+        { id: 'rain',   name: 'Дождь',  preview: 'linear-gradient(#3a4d63, #0b1018)' },
+        { id: 'aurora', name: 'Аврора', preview: 'linear-gradient(135deg, #0b1a3a, #1fd1a5 60%, #8a4dff)' }
+      ].concat(LIVE_VIDEOS.map(function (v, i) {
+        return { id: 'video' + i, name: v.name, src: v.src, preview: '#222' };
+      }));
+      var KEY_LIVE = 'wplayerLive';
+      var liveId = read(KEY_LIVE, '');
+      var canvas = null, video = null, raf = 0;
+
+      var DRAW = {
+        stars: function (c, w, h, t, p) {
+          c.fillStyle = '#05070f'; c.fillRect(0, 0, w, h);
+          p.forEach(function (s) {
+            c.globalAlpha = 0.5 + 0.5 * Math.sin(t * s.v * 300 + s.x * 20);
+            c.fillStyle = '#fff'; c.beginPath();
+            c.arc(s.x * w, ((s.y + t * s.v) % 1) * h, s.r, 0, 6.283); c.fill();
+          });
+          c.globalAlpha = 1;
+        },
+        rain: function (c, w, h, t, p) {
+          var g = c.createLinearGradient(0, 0, 0, h);
+          g.addColorStop(0, '#3a4d63'); g.addColorStop(1, '#0b1018');
+          c.fillStyle = g; c.fillRect(0, 0, w, h);
+          c.strokeStyle = 'rgba(190,210,235,0.45)'; c.lineWidth = 1.2; c.beginPath();
+          p.forEach(function (d) {
+            var y = ((d.y + t * d.v) % 1) * (h + 60) - 30, x = d.x * w + y * 0.15;
+            c.moveTo(x, y); c.lineTo(x + 3, y + d.l);
+          });
+          c.stroke();
+        },
+        aurora: function (c, w, h, t) {
+          c.fillStyle = '#050b18'; c.fillRect(0, 0, w, h);
+          c.globalCompositeOperation = 'lighter';
+          [[31, 209, 165], [138, 77, 255], [60, 160, 255]].forEach(function (col, k) {
+            var g = c.createLinearGradient(0, h * 0.1, 0, h * 0.7);
+            g.addColorStop(0, 'rgba(' + col + ',0)'); g.addColorStop(0.4, 'rgba(' + col + ',0.45)'); g.addColorStop(1, 'rgba(' + col + ',0)');
+            c.fillStyle = g; c.beginPath(); c.moveTo(0, h);
+            for (var x = 0; x <= w; x += 12) c.lineTo(x, h * 0.35 + k * h * 0.07 + Math.sin(x / w * 4 + t * 0.5 + k * 2) * h * 0.08);
+            c.lineTo(w, h); c.closePath(); c.fill();
+          });
+          c.globalCompositeOperation = 'source-over';
+        }
+      };
+
+      function sizeCanvas() { if (canvas) { canvas.width = window.innerWidth; canvas.height = window.innerHeight; } }
+      var LIVE_CSS = 'position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:-1;pointer-events:none;';
+
+      function stopLive() {
+        cancelAnimationFrame(raf); raf = 0;
+        if (canvas) canvas.style.display = 'none';
+        if (video) { video.pause(); video.style.display = 'none'; }
+      }
+
+      function startLive(id) {
+        stopLive();
+        var item = LIVE.filter(function (l) { return l.id === id; })[0];
+        if (!item) { liveId = ''; return; }
+        liveId = id;
+        if (item.src) {
+          if (!video) {
+            video = document.createElement('video');
+            video.muted = true; video.loop = true; video.autoplay = true; video.playsInline = true;
+            video.style.cssText = LIVE_CSS + 'object-fit:cover;';
+            document.body.appendChild(video);
+          }
+          video.src = item.src; video.style.display = 'block';
+          var pr = video.play(); if (pr && pr.catch) pr.catch(function () {});
+          return;
+        }
+        if (!canvas) {
+          canvas = document.createElement('canvas');
+          canvas.style.cssText = LIVE_CSS;
+          document.body.appendChild(canvas);
+          window.addEventListener('resize', sizeCanvas);
+        }
+        sizeCanvas(); canvas.style.display = 'block';
+        var parts = [], i;
+        for (i = 0; i < (id === 'rain' ? 150 : 120); i++) {
+          parts.push({ x: Math.random(), y: Math.random(), r: 0.5 + Math.random() * 1.5, l: 10 + Math.random() * 14,
+                       v: id === 'rain' ? 0.5 + Math.random() * 0.6 : 0.003 + Math.random() * 0.009 });
+        }
+        var t0 = performance.now();
+        (function frame(now) {
+          DRAW[id](canvas.getContext('2d'), canvas.width, canvas.height, (now - t0) / 1000, parts);
+          raf = requestAnimationFrame(frame);
+        })(t0);
+      }
+
+      // ---- Меню ----
+      var staticItems = [], liveItems = [];
+
+      function markActive() {
+        staticItems.forEach(function (el, i) { el.classList.toggle('active', !liveId && i === wall[theme]); });
+        liveItems.forEach(function (el) { el.classList.toggle('active', el.getAttribute('data-id') === liveId); });
+      }
+
+      function addSection(title) {
+        var h = document.createElement('div'); h.className = 'wpTitle'; h.textContent = title; menu.appendChild(h);
+        var row = document.createElement('div'); row.className = 'wpRow'; menu.appendChild(row);
+        return row;
+      }
+
+      function renderMenu() {
+        menu.innerHTML = ''; staticItems = []; liveItems = [];
+        var row = addSection('Обои');
+        WALLPAPERS[theme].forEach(function (name, i) {
+          var item = document.createElement('button');
+          item.type = 'button'; item.className = 'wpItem'; item.title = 'Обои ' + (i + 1);
+          item.setAttribute('role', 'menuitem'); item.setAttribute('aria-label', 'Обои ' + (i + 1));
+          item.addEventListener('click', function () { selectWallpaper(i); });
+          row.appendChild(item); staticItems.push(item);
+          resolveUrl(name, function (url) { if (url) item.style.backgroundImage = 'url("' + url + '")'; });
+        });
+        row = addSection('Живые обои');
+        LIVE.forEach(function (l) {
+          var item = document.createElement('button');
+          item.type = 'button'; item.className = 'wpItem live'; item.title = l.name;
+          item.setAttribute('data-id', l.id); item.setAttribute('role', 'menuitem');
+          item.style.background = l.preview;
+          var label = document.createElement('span'); label.textContent = l.name; item.appendChild(label);
+          item.addEventListener('click', function () { selectLive(l.id); });
+          row.appendChild(item); liveItems.push(item);
+        });
+        markActive();
+      }
+
+      // Меню после выбора остаётся открытым
+      function selectWallpaper(i) {
+        wall[theme] = i; write(KEY_WALL[theme], i);
+        stopLive(); liveId = ''; write(KEY_LIVE, '');
+        setWallpaper(WALLPAPERS[theme][i]);
+        markActive();
+      }
+      function selectLive(id) {
+        startLive(id); write(KEY_LIVE, liveId);
+        markActive();
+      }
+
+      function applyTheme() {
+        document.body.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', BROWSER_BAR[theme]);
+
+        var icon = document.getElementById('themeIcon');
+        if (icon) icon.src = themeIcon(theme);
+        var wIcon = document.getElementById('wallpaperIcon');
+        if (wIcon) wIcon.src = pictureIcon(theme);
+        var tip = document.getElementById('themeTooltip');
+        if (tip) tip.textContent = LABELS[theme];
+        if (themeBtn) themeBtn.setAttribute('aria-label', LABELS[theme]);
+
+        setWallpaper(WALLPAPERS[theme][wall[theme]]);
+        renderMenu();
+      }
+
+      // Кнопка темы только меняет тему; обои берутся те, что выбраны для этой темы
+      window.switchTheme = function () {
+        theme = theme === 'dark' ? 'light' : 'dark';
+        write(KEY_THEME, theme);
+        closeMenu();
+        applyTheme();
+      };
+      window.toggleWallpaperMenu = function () {
+        if (menu.classList.contains('open')) closeMenu(); else openMenu();
+      };
+
+      function onKey(handler) {
+        return function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+        };
+      }
+      if (themeBtn) themeBtn.addEventListener('keydown', onKey(window.switchTheme));
+      if (menuBtn) menuBtn.addEventListener('keydown', onKey(window.toggleWallpaperMenu));
+
+      // Закрываем меню по клику вне его и по Escape
+      document.addEventListener('click', function (e) {
+        if (!menu.contains(e.target) && !menuBtn.contains(e.target)) closeMenu();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeMenu();
+      });
+
+      applyTheme();
+      if (liveId) startLive(liveId);
+      // На случай, если js/index.js ставит свои обои уже после загрузки страницы
+      window.addEventListener('load', function () { setWallpaper(WALLPAPERS[theme][wall[theme]]); });
+    })();
+  </script>
+
+
+</body></html>
